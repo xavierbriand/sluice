@@ -95,6 +95,10 @@ describe('parseCsv', () => {
     expect(() => parseCsv(Buffer.from('', 'latin1'), 'export.csv')).toThrow(/is empty/);
   });
 
+  it('names the file "export.csv" when no caller says otherwise', () => {
+    expect(() => parseCsv(Buffer.from('', 'latin1'))).toThrow(/export\.csv/);
+  });
+
   it('tolerates bare \n line endings, not just \r\n', () => {
     // Every fixture in the suite builds \r\n files, since that is what the bank
     // actually emits — so the /\r?\n/ split's tolerance for a bare \n had never

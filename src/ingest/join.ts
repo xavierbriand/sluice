@@ -23,6 +23,7 @@ export interface JoinedRow {
   readonly csv: CsvRow;
 }
 
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class JoinMismatchError extends Error {
   constructor(message: string) {
     super(message);

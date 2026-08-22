@@ -24,6 +24,7 @@ export type Source =
   | { readonly kind: 'account'; readonly id: string }
   | { readonly kind: 'card'; readonly id: string; readonly cardNumber: string };
 
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class SourceNameError extends Error {
   constructor(message: string) {
     super(message);
@@ -49,6 +50,13 @@ export function sourceOf(filename: string): Source {
     );
   }
 
+  // Both `?? ''` fallbacks below are dead code, not gaps: `m[1]` and
+  // `card[1]` come from `(.+?)` and `(\d{4})`, neither marked optional with
+  // a trailing `?`, so whenever the surrounding regex matches at all the
+  // group has matched too and is a defined string. TypeScript can't express
+  // "this capture group is mandatory," hence `noUncheckedIndexedAccess`
+  // forcing the fallback — but the runtime value can't miss. Same shape as
+  // `money.ts`'s documented `whole = '0'`.
   const stem = (m[1] ?? '').toLowerCase();
   const card = CARD_STEM.exec(stem);
   if (card) return { kind: 'card', id: stem, cardNumber: card[1] ?? '' };

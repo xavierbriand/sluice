@@ -31,6 +31,7 @@ export interface Ledger extends LedgerData {
   readonly reconciliation: ReconciliationReport;
 }
 
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class ExportsNotFoundError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
