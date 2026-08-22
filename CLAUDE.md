@@ -22,6 +22,13 @@ here means finding one to cut.
 - **An envelope's `estimate` is a commitment, never regenerated in place.**
   `generateEnvelopeBlock()` (`src/numbers/generate.ts`) only ever returns
   TOML text for a human to paste; nothing in `app/` calls it.
+- **`app/_lib/` is unit- and mutation-tested like `src/`; the rest of `app/`
+  (components, routes) isn't.** `app/_lib/today.ts` is the product's only
+  clock and `chart.ts` feeds what the axes show — both can produce the wrong
+  number this project's reviews keep finding. `telemetry.ts` sits in
+  `app/_lib` too but is deliberately excluded from the same guarantee: every
+  error in it is swallowed, so it structurally can't produce one (see the
+  comment at the top of that file).
 - **There's no `docs/` folder, and no process documentation lives in this
   repo.** v0.1 had one — 201 lines of `CLAUDE.md` deferring to it, and 72%
   of that version's effort went to process instead of product. Anything

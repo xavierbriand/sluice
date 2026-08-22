@@ -56,7 +56,7 @@ for (const [file, entry] of Object.entries(report.files)) {
 }
 
 const rows = [['scope', 'valid', 'score', 'covered', 'survived', 'no cov', 'timeout']];
-for (const [name, counts] of [['all of src', total], ...[...byDir].sort()]) {
+for (const [name, counts] of [['all files', total], ...[...byDir].sort()]) {
   const c = /** @type {Record<string, number>} */ (counts);
   const { detected, valid, covered } = score(c);
   rows.push([

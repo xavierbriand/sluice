@@ -37,12 +37,20 @@ export default {
   // not `__fixtures__/`. Both exclusions are restated here because the positive
   // glob is `src/**/*.ts` rather than the default's, so nothing is inherited.
   // Fixtures are test scaffolding — mutating them measures nothing.
+  //
+  // `app/_lib/**/*.ts` is included too, and the rest of `app/` (components,
+  // routes) deliberately is not — see CLAUDE.md for the reasoning. This is
+  // the first surface outside `src/` this file mutates, so its own score
+  // shows up as its own row in the report rather than folding into an
+  // aggregate that would hide it either way.
   mutate: [
     'src/**/*.ts',
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
     '!src/**/__tests__/**',
     '!src/**/__fixtures__/**',
+    'app/_lib/**/*.ts',
+    '!app/_lib/**/*.test.ts',
   ],
 
   // Stryker rewrites tsconfig.json when copying into the sandbox, to fix up
