@@ -52,6 +52,8 @@ export interface CsvRow {
   readonly line: number;
 }
 
+// Prose and `this.name` deliberately left surviving — see the comment on
+// DateParseError in src/core/dates.ts.
 export class CsvFormatError extends Error {
   constructor(message: string) {
     super(message);
@@ -93,6 +95,13 @@ export function parseCsv(bytes: Uint8Array, filename = 'export.csv'): CsvRow[] {
     }
   }
 
+  // The `?? ''` can never run: `columns.length !== CSV_COLUMNS.length` has
+  // already thrown above for the header, and every data row is checked
+  // against the same length below before `at` is ever called on it, so
+  // `CSV_COLUMNS.indexOf(name)` — always a valid index into `CSV_COLUMNS`,
+  // since `name` is drawn from that same tuple — is always a valid index
+  // into `cells` too. Exists only to satisfy `noUncheckedIndexedAccess`,
+  // same shape as `money.ts`'s documented `whole = '0'`.
   const at = (cells: string[], name: (typeof CSV_COLUMNS)[number]) =>
     cells[CSV_COLUMNS.indexOf(name)] ?? '';
 

@@ -48,6 +48,8 @@ export interface OfxStatement {
   readonly transactions: readonly OfxTransaction[];
 }
 
+// Prose and `this.name` deliberately left surviving — see the comment on
+// DateParseError in src/core/dates.ts.
 export class OfxFormatError extends Error {
   constructor(message: string) {
     super(message);
@@ -78,6 +80,12 @@ export function parseOfx(bytes: Uint8Array, filename = 'export.ofx'): OfxStateme
     throw new OfxFormatError(`${filename}: no <OFX> element — is this an OFX export?`);
   }
 
+  // `preamble`'s default can never run: `String.prototype.split` always
+  // returns at least one element, so destructuring the first one out of the
+  // result never falls through to a default. It exists only to satisfy
+  // `noUncheckedIndexedAccess` — the same shape as `money.ts`'s documented
+  // `whole = '0'`. The split token itself, `'<STMTTRN>'`, is a real
+  // format-contract string and is tested below.
   const [preamble = '', ...txBlocks] = text.split('<STMTTRN>');
 
   const transactions = txBlocks.map((block, i) => {

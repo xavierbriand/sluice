@@ -90,17 +90,34 @@ describe('parseOfx', () => {
     expect(statement.transactions.map((t) => t.amount)).toEqual([-1000, -2000]);
   });
 
-  it('treats an absent TRNTYPE or NAME as empty, not as missing', () => {
-    // Unlike FITID/DTPOSTED/TRNAMT, these two are read with `?? ''` rather
-    // than `required()` — a card statement's memo-only rows have been seen
-    // without a NAME. The `?? ''` fallbacks on both had no test reaching them.
+  it('treats an absent TRNTYPE, NAME or MEMO as empty, not as missing', () => {
+    // Unlike FITID/DTPOSTED/TRNAMT, these are read with `?? ''` rather than
+    // `required()` — a card statement's memo-only rows have been seen without
+    // a NAME. The `?? ''` fallbacks had no test reaching them.
     const statement = parseOfx(
-      ofxFixture([{ postedOn: '01/08/2026', amount: '-10,00', omit: ['TRNTYPE', 'NAME'] }], {
+      ofxFixture([{ postedOn: '01/08/2026', amount: '-10,00', omit: ['TRNTYPE', 'NAME', 'MEMO'] }], {
         to: '20260815',
       }),
     );
     expect(statement.transactions[0]?.type).toBe('');
     expect(statement.transactions[0]?.name).toBe('');
+    expect(statement.transactions[0]?.memo).toBe('');
+  });
+
+  it('reads TRNTYPE, NAME and MEMO when they are present, not just their fallback', () => {
+    // The omit test above proves the `?? ''` fallback works; it cannot prove
+    // the tag lookup itself is right, because a corrupted tag name (`'TRNTYPE'`
+    // read as garbage) falls back to the same `''` and passes it too. A
+    // present, distinctive value is the only thing that tells the two apart.
+    // No fixture had ever set a `<MEMO>` at all before this.
+    const statement = parseOfx(
+      ofxFixture([{ postedOn: '01/08/2026', amount: '-10,00', label: 'COTISATION', memo: 'ANNUAL FEE' }], {
+        to: '20260815',
+      }),
+    );
+    expect(statement.transactions[0]?.type).toBe('DEBIT');
+    expect(statement.transactions[0]?.name).toBe('COTISATION');
+    expect(statement.transactions[0]?.memo).toBe('ANNUAL FEE');
   });
 
   it('defaults the currency to EUR when CURDEF is absent', () => {
@@ -108,6 +125,20 @@ describe('parseOfx', () => {
       ofxFixture([{ postedOn: '01/08/2026', amount: '-10,00' }], { to: '20260815', omitCurdef: true }),
     );
     expect(statement.currency).toBe('EUR');
+  });
+
+  it('reads a non-default currency from CURDEF, not just the EUR fallback', () => {
+    // Every other fixture's CURDEF happens to be 'EUR', which is also the
+    // fallback value — so a corrupted `'CURDEF'` tag name would silently take
+    // the same fallback and no test would have noticed.
+    const statement = parseOfx(
+      ofxFixture([{ postedOn: '01/08/2026', amount: '-10,00' }], { to: '20260815', currency: 'USD' }),
+    );
+    expect(statement.currency).toBe('USD');
+  });
+
+  it('names the file "export.ofx" when no caller says otherwise', () => {
+    expect(() => parseOfx(Buffer.from('just some text', 'latin1'))).toThrow(/export\.ofx/);
   });
 
   it('accepts a statement with no transactions and still reads its balance', () => {

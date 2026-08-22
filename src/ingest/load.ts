@@ -31,6 +31,8 @@ export interface Ledger extends LedgerData {
   readonly reconciliation: ReconciliationReport;
 }
 
+// Prose and `this.name` deliberately left surviving — see the comment on
+// DateParseError in src/core/dates.ts.
 export class ExportsNotFoundError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);

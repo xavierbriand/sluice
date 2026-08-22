@@ -19,8 +19,10 @@ export interface FixtureRow {
   readonly operationType?: string;
   readonly notes?: string;
   readonly fitId?: string;
+  /** OFX only, ignored by `csvFixture`. */
+  readonly memo?: string;
   /** OFX only, ignored by `csvFixture`: tags to leave out of this transaction's block. */
-  readonly omit?: readonly ('TRNTYPE' | 'DTPOSTED' | 'TRNAMT' | 'FITID' | 'NAME')[];
+  readonly omit?: readonly ('TRNTYPE' | 'DTPOSTED' | 'TRNAMT' | 'FITID' | 'NAME' | 'MEMO')[];
 }
 
 export function csvFixture(rows: readonly FixtureRow[]): Uint8Array {
@@ -62,6 +64,8 @@ export interface OfxOptions {
   readonly balanceAsOf?: string; // YYYYMMDD
   readonly omitBalance?: boolean;
   readonly omitCurdef?: boolean;
+  /** Ignored when `omitCurdef` is set. Defaults to 'EUR', same as every real export seen so far. */
+  readonly currency?: string;
 }
 
 function ofxDate(french: string): string {
@@ -82,6 +86,7 @@ export function ofxFixture(rows: readonly FixtureRow[], options: OfxOptions = {}
     balanceAsOf = to,
     omitBalance = false,
     omitCurdef = false,
+    currency = 'EUR',
   } = options;
 
   const body = rows
@@ -94,6 +99,7 @@ export function ofxFixture(rows: readonly FixtureRow[], options: OfxOptions = {}
         !omit.has('TRNAMT') && `<TRNAMT>${ofxAmount(r.amount)}`,
         !omit.has('FITID') && `<FITID>${r.fitId ?? `FIT${i + 1}`}`,
         !omit.has('NAME') && `<NAME>${r.label ?? 'MERCHANT'}`,
+        !omit.has('MEMO') && `<MEMO>${r.memo ?? 'NOTE'}`,
         '</STMTTRN>',
       ];
       return lines.filter((l): l is string => l !== false).join('\r\n');
@@ -137,7 +143,7 @@ export function ofxFixture(rows: readonly FixtureRow[], options: OfxOptions = {}
     '<SEVERITY>INFO',
     '</STATUS>',
     '<STMTRS>',
-    ...(omitCurdef ? [] : ['<CURDEF>EUR']),
+    ...(omitCurdef ? [] : [`<CURDEF>${currency}`]),
     '<BANKACCTFROM>',
     `<ACCTID>${accountId}</ACCTID>`,
     '</BANKACCTFROM>',
