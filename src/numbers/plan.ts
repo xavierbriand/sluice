@@ -1,4 +1,4 @@
-import { sum } from '../core/money.ts';
+import { sum, type Cents } from '../core/money.ts';
 import { monthNumber, monthOf, type Day } from '../core/dates.ts';
 import type { Config } from '../config/load.ts';
 import type { Ledger } from '../ingest/load.ts';
@@ -12,6 +12,15 @@ import { auditPlan, type PlanWarning } from './audit.ts';
 /** Everything section 01 through 03 of the page renders, computed together so none of it can disagree. */
 export interface Plan {
   readonly referenceDay: Day;
+  /**
+   * What `computeShares` splits across people — exposed directly rather
+   * than left for a caller to reconstruct by summing `shares`, even though
+   * `allocate()` guarantees that sum equals this exactly. This is the
+   * causally prior figure (a requirement, split into shares), not the
+   * other way around, and the page's own "why is this month's total what
+   * it is" breakdown reads better against the figure it was computed from.
+   */
+  readonly monthlyRequirement: Cents;
   readonly shares: readonly PersonShare[];
   readonly contributions: readonly MonthlyContributions[];
   readonly consumption: readonly EnvelopeConsumption[];
@@ -44,8 +53,8 @@ export function computePlan(config: Config, ledger: Ledger, referenceDay: Day): 
 
   const shares = computeShares(config.people, monthlyRequirement);
   const contributions = contributionsByMonth(attributeContributions(config, ledger));
-  const check = checkPlan(config, ledger, consumption, referenceDay);
+  const check = checkPlan(config, ledger, consumption, shares, referenceDay);
   const warnings = auditPlan(config, ledger);
 
-  return { referenceDay, shares, contributions, consumption, check, warnings };
+  return { referenceDay, monthlyRequirement, shares, contributions, consumption, check, warnings };
 }

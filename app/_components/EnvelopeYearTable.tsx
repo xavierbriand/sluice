@@ -21,11 +21,13 @@ export interface EnvelopeYearTableProps {
  *
  * A table, not a chart: `> ~7 classes` already argues for one, and a real
  * household clears that many times over (54 rows, one real test run so
- * far). Sorted the same way `plan.consumption` already is — this is a
- * reference to read down, not a "which one first" ranking the way 02's
- * meters or 03's check table are.
+ * far). Sorted by prior-year actual, biggest first — the envelopes worth
+ * the most money are the ones worth checking the estimate on first when
+ * rebuilding next year's plan.
  */
 export function EnvelopeYearTable({ consumption }: EnvelopeYearTableProps) {
+  const rows = [...consumption].sort((a, b) => b.priorYearActual - a.priorYearActual);
+
   return (
     <div className="table-scroll">
       <table className="data-table year">
@@ -38,7 +40,7 @@ export function EnvelopeYearTable({ consumption }: EnvelopeYearTableProps) {
           </tr>
         </thead>
         <tbody>
-          {consumption.map((c) => (
+          {rows.map((c) => (
             <tr key={`${c.envelope.kind}:${envelopeId(c.envelope)}`}>
               <td>
                 {envelopeName(c.envelope)}

@@ -4,6 +4,7 @@ import type { Config } from '../config/load.ts';
 import type { Ledger } from '../ingest/load.ts';
 import { outflow } from './envelopes.ts';
 import type { EnvelopeConsumption } from './consumption.ts';
+import type { PersonShare } from './income.ts';
 import { attributeContributions, contributionsByMonth } from './funding.ts';
 
 /**
@@ -25,6 +26,25 @@ export interface EnvelopeCheck {
   readonly projectedFullYear: Cents | null;
 }
 
+/**
+ * `ok`: a sustainable share of this person's own income.
+ * `high`: over three-quarters of it — worth a look before it gets to `exceeds-income`.
+ * `exceeds-income`: this person would transfer more than they themselves net — either
+ * wrong data (a `transfer_labels` pattern catching the wrong transfer, an income
+ * source missing from `sluice.toml`) or the plan has genuinely outgrown the
+ * household's income.
+ */
+export type ShareStatus = 'ok' | 'high' | 'exceeds-income';
+
+export interface PersonCheck {
+  readonly personId: string;
+  /** This person's own monthly-equivalent net income — `PersonShare.netMonthly`. */
+  readonly netMonthly: Cents;
+  /** What they actually transfer this month — `PersonShare.amount`. */
+  readonly amount: Cents;
+  readonly status: ShareStatus;
+}
+
 export interface PlanCheck {
   /** Sum of every configured envelope's estimate. */
   readonly plannedTotal: Cents;
@@ -40,6 +60,19 @@ export interface PlanCheck {
   readonly worstObservedMonth: Cents;
   readonly bufferSufficient: boolean;
   readonly envelopes: readonly EnvelopeCheck[];
+  readonly people: readonly PersonCheck[];
+}
+
+/**
+ * `amount * 4 > netMonthly * 3` rather than `amount > netMonthly * 0.75`:
+ * the same reason `allocate()` runs its remainder math in whole units
+ * rather than a float — a quarter-point threshold on real income figures
+ * has no business going anywhere near IEEE-754 division.
+ */
+function checkShare(share: PersonShare): PersonCheck {
+  const status: ShareStatus =
+    share.amount > share.netMonthly ? 'exceeds-income' : share.amount * 4 > share.netMonthly * 3 ? 'high' : 'ok';
+  return { personId: share.personId, netMonthly: share.netMonthly, amount: share.amount, status };
 }
 
 function checkEnvelope(c: EnvelopeConsumption): EnvelopeCheck {
@@ -91,14 +124,15 @@ function netFlowByMonth(config: Config, ledger: Ledger): ReadonlyMap<Month, Cent
 /**
  * How the plan compares to reality, as of `referenceDay`.
  *
- * `consumption` is supplied rather than recomputed, so this never disagrees
- * with what section 02 is showing at the same moment — both come from the
- * same call, in `numbers/plan.ts`.
+ * `consumption` and `shares` are supplied rather than recomputed, so this
+ * never disagrees with what sections 01 and 02 are showing at the same
+ * moment — all three come from the same call, in `numbers/plan.ts`.
  */
 export function checkPlan(
   config: Config,
   ledger: Ledger,
   consumption: readonly EnvelopeConsumption[],
+  shares: readonly PersonShare[],
   referenceDay: Day,
 ): PlanCheck {
   const plannedTotal = consumption.reduce(
@@ -127,5 +161,6 @@ export function checkPlan(
     worstObservedMonth,
     bufferSufficient: config.bufferTarget + worstObservedMonth >= 0,
     envelopes: consumption.map(checkEnvelope),
+    people: shares.map(checkShare),
   };
 }

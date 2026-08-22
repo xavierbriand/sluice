@@ -1,8 +1,9 @@
-import { formatMonthShort, monthOf, type Day } from '@/core/dates.ts';
+import { Fragment } from 'react';
+import { formatMonthLong, formatMonthShort, monthOf, type Day } from '@/core/dates.ts';
 import { formatEur, formatEurCompact, type Cents } from '@/core/money.ts';
 import type { Person } from '@/config/load.ts';
 import type { MonthlyContributions } from '@/numbers/funding.ts';
-import { niceMax } from '../_lib/chart.ts';
+import { niceMax, TOOLTIP_GAP, TOOLTIP_WIDTH, tooltipHeight } from '../_lib/chart.ts';
 import { Legend } from './Legend.tsx';
 
 export interface ContributionsChartProps {
@@ -28,11 +29,13 @@ const TOP_ROOM = 14; // above the 100% gridline, so its label isn't clipped by t
 const LEFT_AXIS_WIDTH = 56; // for the Y-axis tick labels
 
 interface Segment {
+  readonly name: string;
+  readonly amount: Cents;
   readonly height: number;
   readonly color: string;
   readonly muted: boolean;
-  readonly label: string;
 }
+
 
 /**
  * A rectangle rounded at the top two corners only, square at the bottom —
@@ -127,24 +130,26 @@ export function ContributionsChart({ months, people, referenceDay }: Contributio
             const amount = month.byPerson.get(person.id) ?? 0;
             if (amount <= 0) continue;
             segments.push({
+              name: person.name,
+              amount,
               height: scale(amount),
               color: SERIES_COLORS[idx % SERIES_COLORS.length]!,
               muted: false,
-              label: `${person.name} ${formatEur(amount)}`,
             });
           }
           if (month.unattributed > 0) {
             segments.push({
+              name: 'Unattributed',
+              amount: month.unattributed,
               height: scale(month.unattributed),
               color: '',
               muted: true,
-              label: `Unattributed ${formatEur(month.unattributed)}`,
             });
           }
 
           const titleText = `${formatMonthShort(month.month)}${isInProgress ? ' (in progress)' : ''} — ${formatEur(
             month.total,
-          )} total${segments.length > 0 ? ` (${segments.map((s) => s.label).join(', ')})` : ''}`;
+          )} total${segments.length > 0 ? ` (${segments.map((s) => `${s.name} ${formatEur(s.amount)}`).join(', ')})` : ''}`;
 
           let cursorTop = baseline;
           const rects = segments.map((seg, idx) => {
@@ -159,15 +164,56 @@ export function ContributionsChart({ months, people, referenceDay }: Contributio
               <rect key={idx} x={x} y={top} width={BAR_WIDTH} height={seg.height} fill={fill} fillOpacity={fillOpacity} />
             );
           });
+          // `cursorTop` has stepped one SEGMENT_GAP past the topmost
+          // segment's own top edge — add it back to anchor the tooltip
+          // there rather than in the gap above the bar.
+          const barTop = segments.length > 0 ? cursorTop + SEGMENT_GAP : baseline;
+
+          // One figure row per segment, plus the total note line.
+          const boxHeight = tooltipHeight(segments.length + 1);
+          const tooltipX = Math.min(
+            Math.max(x + BAR_WIDTH / 2 - TOOLTIP_WIDTH / 2, 2),
+            width - TOOLTIP_WIDTH - 2,
+          );
+          const tooltipY = barTop - TOOLTIP_GAP - boxHeight;
 
           return (
-            <g key={month.month} opacity={isInProgress ? 0.6 : 1}>
+            <g key={month.month} className="bar-group" opacity={isInProgress ? 0.6 : 1}>
               <title>{titleText}</title>
               {rects}
               <text className="month-label" x={x + BAR_WIDTH / 2} y={svgHeight - 8} textAnchor="middle">
                 {formatMonthShort(month.month)}
                 {isInProgress ? '*' : ''}
               </text>
+              <foreignObject
+                className="bar-tooltip-anchor"
+                x={tooltipX}
+                y={tooltipY}
+                width={TOOLTIP_WIDTH}
+                height={boxHeight}
+              >
+                <div className="tooltip-box">
+                  <div className="tooltip-title">
+                    {formatMonthLong(month.month)}
+                    {isInProgress ? ' (in progress)' : ''}
+                  </div>
+                  <dl className="tooltip-figures">
+                    {segments.map((seg) => (
+                      <Fragment key={seg.name}>
+                        <dt>
+                          <span
+                            className={seg.muted ? 'swatch swatch-muted' : 'swatch'}
+                            style={seg.muted ? undefined : { background: seg.color }}
+                          />
+                          {seg.name}
+                        </dt>
+                        <dd className="num">{formatEur(seg.amount)}</dd>
+                      </Fragment>
+                    ))}
+                  </dl>
+                  <p className="tooltip-note">Total {formatEur(month.total)}</p>
+                </div>
+              </foreignObject>
             </g>
           );
         })}

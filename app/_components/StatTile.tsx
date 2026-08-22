@@ -1,4 +1,4 @@
-import { formatEur, formatEurSigned, type Cents } from '@/core/money.ts';
+import { formatEur, formatEurExplicitSign, type Cents } from '@/core/money.ts';
 
 /**
  * A headline number, not a column: proportional figures, not `.num`
@@ -23,20 +23,8 @@ export interface StatTileProps {
   readonly signed?: boolean;
 }
 
-/**
- * Prefixes `+` unless `formatEurSigned` already put a `-` in front, or the
- * value is exactly zero (zero has no direction to mark). Checking the
- * formatted string rather than `value > 0` — a numeric comparison would
- * also need its own zero special-case, and gets it wrong for a `-0`, which
- * compares equal to `0` but Intl can still render as negative.
- */
-function formatSigned(value: Cents): string {
-  const formatted = formatEurSigned(value);
-  return value === 0 || formatted.startsWith('-') ? formatted : `+${formatted}`;
-}
-
 export function StatTile({ label, value, seriesColor, sub, signed }: StatTileProps) {
-  const text = signed === true ? formatSigned(value) : formatEur(value);
+  const text = signed === true ? formatEurExplicitSign(value) : formatEur(value);
   return (
     <div className="stat-tile">
       <span className="stat-tile-label">

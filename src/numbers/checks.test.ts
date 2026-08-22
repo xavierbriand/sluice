@@ -3,6 +3,7 @@ import type { Day } from '../core/dates.ts';
 import { checkPlan } from './checks.ts';
 import { resolveEnvelopes } from './envelopes.ts';
 import { computeConsumption } from './consumption.ts';
+import type { PersonShare } from './income.ts';
 import { ledgerOf, numbersConfig, tx } from './__fixtures__/build.ts';
 
 function check(configOverrides: Parameters<typeof numbersConfig>[0], transactions: Parameters<typeof tx>[0][], referenceDay: string) {
@@ -10,7 +11,7 @@ function check(configOverrides: Parameters<typeof numbersConfig>[0], transaction
   const ledger = ledgerOf(transactions.map(tx));
   const resolved = resolveEnvelopes(config, ledger);
   const consumption = computeConsumption(ledger, resolved, referenceDay as Day);
-  return checkPlan(config, ledger, consumption, referenceDay as Day);
+  return checkPlan(config, ledger, consumption, [], referenceDay as Day);
 }
 
 describe('checkPlan — goal status', () => {
@@ -136,7 +137,7 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
     ]);
     const resolved = resolveEnvelopes(config, ledger);
     const consumption = computeConsumption(ledger, resolved, '2026-02-15' as Day);
-    const result = checkPlan(config, ledger, consumption, '2026-02-15' as Day);
+    const result = checkPlan(config, ledger, consumption, [], '2026-02-15' as Day);
     // Without the floor, this would be 20000 — the smallest gain — not 0.
     expect(result.worstObservedMonth).toBe(0);
     expect(result.bufferSufficient).toBe(true);
@@ -168,7 +169,7 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
     ]);
     const resolved = resolveEnvelopes(config, ledger);
     const consumption = computeConsumption(ledger, resolved, '2026-02-15' as Day);
-    const result = checkPlan(config, ledger, consumption, '2026-02-15' as Day);
+    const result = checkPlan(config, ledger, consumption, [], '2026-02-15' as Day);
     expect(result.worstObservedMonth).toBe(-80000);
   });
 
@@ -187,7 +188,7 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
     ]);
     const resolved = resolveEnvelopes(config, ledger);
     const consumption = computeConsumption(ledger, resolved, '2026-02-15' as Day);
-    const result = checkPlan(config, ledger, consumption, '2026-02-15' as Day);
+    const result = checkPlan(config, ledger, consumption, [], '2026-02-15' as Day);
     expect(result.worstObservedMonth).toBe(-20000);
   });
 
@@ -198,7 +199,7 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
     ]);
     const resolved = resolveEnvelopes(config, ledger);
     const consumption = computeConsumption(ledger, resolved, '2026-01-25' as Day);
-    const result = checkPlan(config, ledger, consumption, '2026-01-25' as Day);
+    const result = checkPlan(config, ledger, consumption, [], '2026-01-25' as Day);
     expect(result.worstObservedMonth).toBe(-15000);
   });
 
@@ -211,6 +212,7 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
       config,
       atBoundary,
       computeConsumption(atBoundary, resolvedA, '2026-01-10' as Day),
+      [],
       '2026-01-10' as Day,
     );
     expect(resultA.worstObservedMonth).toBe(-250000);
@@ -222,8 +224,60 @@ describe('checkPlan — worstObservedMonth and bufferSufficient', () => {
       config,
       overBoundary,
       computeConsumption(overBoundary, resolvedB, '2026-01-10' as Day),
+      [],
       '2026-01-10' as Day,
     );
     expect(resultB.bufferSufficient).toBe(false);
+  });
+});
+
+describe('checkPlan — share vs income', () => {
+  function shareCheck(shares: readonly PersonShare[]) {
+    const config = numbersConfig();
+    const ledger = ledgerOf([]);
+    const resolved = resolveEnvelopes(config, ledger);
+    const consumption = computeConsumption(ledger, resolved, '2026-06-01' as Day);
+    return checkPlan(config, ledger, consumption, shares, '2026-06-01' as Day).people;
+  }
+
+  it('is ok well under three-quarters of income', () => {
+    const [p] = shareCheck([{ personId: 'alice', netMonthly: 400000, amount: 200000 }]);
+    expect(p?.status).toBe('ok');
+  });
+
+  it('is ok exactly at three-quarters — the boundary is not yet high', () => {
+    // 400000 * 3/4 = 300000 exactly.
+    const [p] = shareCheck([{ personId: 'alice', netMonthly: 400000, amount: 300000 }]);
+    expect(p?.status).toBe('ok');
+  });
+
+  it('is high one cent past three-quarters of income', () => {
+    const [p] = shareCheck([{ personId: 'alice', netMonthly: 400000, amount: 300001 }]);
+    expect(p?.status).toBe('high');
+  });
+
+  it('is still high exactly at income — not yet exceeds-income', () => {
+    const [p] = shareCheck([{ personId: 'alice', netMonthly: 400000, amount: 400000 }]);
+    expect(p?.status).toBe('high');
+  });
+
+  it('exceeds-income one cent past their own net income', () => {
+    const [p] = shareCheck([{ personId: 'alice', netMonthly: 400000, amount: 400001 }]);
+    expect(p?.status).toBe('exceeds-income');
+  });
+
+  it('carries personId, netMonthly and amount through unchanged', () => {
+    const [p] = shareCheck([{ personId: 'bruno', netMonthly: 245000, amount: 100000 }]);
+    expect(p).toEqual({ personId: 'bruno', netMonthly: 245000, amount: 100000, status: 'ok' });
+  });
+
+  it('checks every person independently, in the order shares were given', () => {
+    const people = shareCheck([
+      { personId: 'alice', netMonthly: 400000, amount: 500000 },
+      { personId: 'bruno', netMonthly: 245000, amount: 50000 },
+    ]);
+    expect(people.map((p) => p.personId)).toEqual(['alice', 'bruno']);
+    expect(people[0]?.status).toBe('exceeds-income');
+    expect(people[1]?.status).toBe('ok');
   });
 });

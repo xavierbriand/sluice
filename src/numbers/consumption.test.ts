@@ -33,6 +33,8 @@ describe('computeConsumption', () => {
     // 120000 split proportionally to [10000,10000,10000,0,...]: each of the
     // first three months gets 120000*10000/30000 = 40000 exactly.
     expect(c?.monthlyPlan).toEqual([40000, 40000, 40000, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    // The same 120000 spread flat instead: 120000/12 = 10000 exactly, every month.
+    expect(c?.flatMonthlyPlan).toEqual(Array(12).fill(10000));
     // Cumulative through March (index 2): 40000 * 3 = 120000.
     expect(c?.paceExpected).toBe(120000);
     // Jan + Feb + the one March row before the 15th: 50000+50000+30000.
@@ -74,11 +76,75 @@ seasonal = { months = [7] }
 
     expect(c?.envelope.kind).toBe('derived');
     expect(c?.monthlyPlan).toBeNull();
+    expect(c?.flatMonthlyPlan).toBeNull();
     expect(c?.paceExpected).toBe(0);
     // No plan means nothing is "expected" — so any spending at all is, by
     // construction, entirely over pace.
     expect(c?.yearToDateSpent).toBe(1500);
     expect(c?.overPace).toBe(1500);
+  });
+
+  it('flatMonthlyPlan exposes a seasonal skew a mid-year-start envelope would otherwise hide', () => {
+    // A mortgage that started in June of the prior year: zero spend
+    // Jan-May, roughly equal June-December. Derived-from-history spreads
+    // this year's whole estimate across only those 7 months instead of 12
+    // — real behaviour this test pins down, the same pattern that showed
+    // up in a real household's own data.
+    const config = numbersConfig({
+      envelopes: `
+[envelopes.mortgage]
+name = "Mortgage"
+matches = [{ category = "Logement", sub_category = "Credit" }]
+estimate = "12000.00"
+`,
+    });
+    const ledger = ledgerOf(
+      ['06', '07', '08', '09', '10', '11', '12'].map((month) =>
+        tx({
+          id: `25-${month}`,
+          occurredOn: `2025-${month}-05`,
+          amount: -100000,
+          category: 'Logement',
+          subCategory: 'Credit',
+        }),
+      ),
+    );
+    const resolved = resolveEnvelopes(config, ledger);
+    const [c] = computeConsumption(ledger, resolved, '2026-08-01' as Day);
+
+    expect(c?.seasonal.provenance).toBe('derived-from-history');
+    // August is month index 7: seasonal weights are flat across Jun-Dec
+    // (all equal, 100000 each), so the estimate splits evenly across
+    // those 7 months: 1200000 / 7 = 171428.57... — allocate()'s remainder
+    // step lands the extra cents somewhere, but every one of the 7 months
+    // gets roughly this, not the flat-across-12 figure.
+    const august = c?.monthlyPlan?.[7] ?? 0;
+    const augustFlat = c?.flatMonthlyPlan?.[7] ?? 0;
+    expect(august).toBeGreaterThan(augustFlat);
+    // Flat spreads the same estimate evenly across all 12 months: exactly
+    // 1200000 / 12 = 100000.
+    expect(augustFlat).toBe(100000);
+    // The seasonal figure is close to a 7-way split of the full estimate —
+    // meaningfully larger than the 12-way flat split, not just a rounding
+    // difference.
+    expect(august).toBeGreaterThan(augustFlat * 1.5);
+  });
+
+  it('flatMonthlyPlan always sums to exactly the estimate, same guarantee monthlyPlan has', () => {
+    // 1000.00 (100000c) does not divide evenly by 12 — allocate()'s
+    // largest-remainder step must still land on the estimate exactly.
+    const config = numbersConfig({
+      envelopes: `
+[envelopes.groceries]
+name = "Groceries"
+matches = [{ category = "Alimentation", sub_category = "Supermarche" }]
+estimate = "1000.00"
+`,
+    });
+    const resolved = resolveEnvelopes(config, ledgerOf([]));
+    const [c] = computeConsumption(ledgerOf([]), resolved, '2026-06-01' as Day);
+
+    expect(c?.flatMonthlyPlan?.reduce((a, b) => a + b, 0)).toBe(100000);
   });
 
   it('follows the same order resolveEnvelopes returns', () => {

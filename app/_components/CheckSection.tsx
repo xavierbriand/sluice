@@ -3,12 +3,28 @@ import { formatEur } from '@/core/money.ts';
 import type { Config, EnvelopeMatcher } from '@/config/load.ts';
 import type { Plan } from '@/numbers/plan.ts';
 import type { PlanWarning } from '@/numbers/audit.ts';
+import type { ShareStatus } from '@/numbers/checks.ts';
 import { StatTile } from './StatTile.tsx';
-import { StatusBadge } from './StatusBadge.tsx';
+import { StatusBadge, type StatusTone } from './StatusBadge.tsx';
 import { EnvelopeCheckTable } from './EnvelopeCheckTable.tsx';
 
 function describeMatcher(matcher: EnvelopeMatcher): string {
   return matcher.kind === 'category' ? `"${matcher.category}"` : `"${matcher.category} / ${matcher.subCategory}"`;
+}
+
+function personName(config: Config, personId: string): string {
+  return config.people.find((p) => p.id === personId)?.name ?? personId;
+}
+
+function shareBadge(status: ShareStatus): { readonly tone: StatusTone; readonly icon: string; readonly label: string } {
+  switch (status) {
+    case 'ok':
+      return { tone: 'good', icon: '✓', label: 'Sustainable' };
+    case 'high':
+      return { tone: 'warning', icon: '!', label: 'High — over 3/4 of income' };
+    case 'exceeds-income':
+      return { tone: 'critical', icon: '!', label: 'Exceeds income' };
+  }
 }
 
 /** "24 Jan 2026" — every other date-like figure on the page is formatted for humans; a findings sentence shouldn't be the one place a raw ISO string shows through. */
@@ -62,7 +78,9 @@ function describeWarning(warning: PlanWarning): string {
 /**
  * Plan vs. reality: drift as a signed figure (no invented good/bad
  * threshold — the domain layer has none), envelopes past pace and their
- * goal status as a table, buffer sufficiency as a status badge, and
+ * goal status as a table, buffer sufficiency as a status badge, each
+ * person's transfer against their own income (also a status badge — this
+ * one *does* have a domain-computed threshold, `ShareStatus`), and
  * whatever the audit found as a plain findings list.
  */
 export function CheckSection({ config, plan }: { readonly config: Config; readonly plan: Plan }) {
@@ -94,6 +112,20 @@ export function CheckSection({ config, plan }: { readonly config: Config; readon
             {formatEur(config.bufferTarget)} target · worst month observed {formatEur(check.worstObservedMonth)}
           </span>
         </div>
+        {check.people.map((p) => {
+          const badge = shareBadge(p.status);
+          return (
+            <div className="buffer-status" key={p.personId}>
+              <span className="stat-tile-label">{personName(config, p.personId)} transfer</span>
+              <StatusBadge tone={badge.tone} icon={badge.icon} label={badge.label} />
+              <span className="stat-tile-sub">
+                {p.status === 'exceeds-income'
+                  ? `${formatEur(p.amount)} transferred — ${formatEur(p.amount - p.netMonthly)} more than their ${formatEur(p.netMonthly)} net income`
+                  : `${formatEur(p.amount)} of ${formatEur(p.netMonthly)} net income`}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <EnvelopeCheckTable envelopes={check.envelopes} />

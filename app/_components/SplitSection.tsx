@@ -2,6 +2,7 @@ import { formatEur, sum } from '@/core/money.ts';
 import type { Config } from '@/config/load.ts';
 import type { Plan } from '@/numbers/plan.ts';
 import { ContributionsChart } from './ContributionsChart.tsx';
+import { RequirementBreakdown } from './RequirementBreakdown.tsx';
 
 const SERIES_COLORS = ['var(--series-1)', 'var(--series-2)'] as const;
 
@@ -63,6 +64,17 @@ export function SplitSection({ config, plan }: { readonly config: Config; readon
           </tbody>
         </table>
       </div>
+
+      <h3>Expected this month</h3>
+      <p className="deck">
+        Every configured envelope&apos;s share of this month&apos;s requirement, against what the same estimate
+        would ask for spread flat across the year — the seasonal shape that number is made of, not just the total.
+      </p>
+      <RequirementBreakdown
+        consumption={plan.consumption}
+        referenceDay={plan.referenceDay}
+        monthlyRequirement={plan.monthlyRequirement}
+      />
 
       <ContributionsChart months={plan.contributions} people={config.people} referenceDay={plan.referenceDay} />
     </section>

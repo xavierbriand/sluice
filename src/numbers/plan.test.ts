@@ -23,6 +23,7 @@ describe('computePlan', () => {
     const plan = computePlan(config, ledger, referenceDay);
 
     expect(plan.referenceDay).toBe(referenceDay);
+    expect(plan.monthlyRequirement).toBe(40000);
 
     // alice 3200.00, bruno 2450.00 net monthly (weight sum 565000):
     // 40000*320000/565000 = 22654.86..., 40000*245000/565000 = 17345.13...
@@ -58,9 +59,11 @@ seasonal = { months = [6] }
     const ledger = ledgerOf([]);
 
     const inJanuary = computePlan(config, ledger, '2026-01-15' as Day);
+    expect(inJanuary.monthlyRequirement).toBe(0);
     expect(sum(inJanuary.shares.map((s) => s.amount))).toBe(0);
 
     const inJune = computePlan(config, ledger, '2026-06-15' as Day);
+    expect(inJune.monthlyRequirement).toBe(120000);
     expect(sum(inJune.shares.map((s) => s.amount))).toBe(120000);
   });
 

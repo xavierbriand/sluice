@@ -1,7 +1,7 @@
 import { formatMonthShort, formatMonthLong, monthOf, type Day } from '@/core/dates.ts';
 import { formatEur, formatEurCompact, sum, type Cents } from '@/core/money.ts';
 import type { MonthlySpend } from '@/numbers/timeline.ts';
-import { niceMax } from '../_lib/chart.ts';
+import { niceMax, TOOLTIP_GAP, TOOLTIP_WIDTH, tooltipHeight } from '../_lib/chart.ts';
 
 export interface SpendTrendChartProps {
   /** `monthlySpendTimeline(ledger)` — every month the ledger has, ascending. */
@@ -104,14 +104,43 @@ export function SpendTrendChart({ months, referenceDay }: SpendTrendChartProps) 
           const titleText = `${formatMonthLong(p.month.month)}${isPartial ? ' (in progress)' : ''} — ${formatEur(
             p.month.total,
           )}`;
+
+          const delta = p.month.total - mean;
+          const deltaText =
+            delta === 0
+              ? 'Exactly average.'
+              : `${formatEur(Math.abs(delta))} ${delta > 0 ? 'above' : 'below'} average.`;
+          const boxHeight = tooltipHeight(2); // one figure row (spent) + the delta note
+          const tooltipX = Math.min(Math.max(p.x - TOOLTIP_WIDTH / 2, 2), width - TOOLTIP_WIDTH - 2);
+          const tooltipY = p.y - TOOLTIP_GAP - boxHeight;
+
           return (
-            <g key={p.month.month} opacity={isPartial ? 0.6 : 1}>
+            <g key={p.month.month} className="bar-group" opacity={isPartial ? 0.6 : 1}>
               <title>{titleText}</title>
               <circle className="trend-point" cx={p.x} cy={p.y} r={MARKER_R} />
               <text className="month-label" x={p.x} y={svgHeight - 8} textAnchor="middle">
                 {formatMonthShort(p.month.month)}
                 {isPartial ? '*' : ''}
               </text>
+              <foreignObject
+                className="bar-tooltip-anchor"
+                x={tooltipX}
+                y={tooltipY}
+                width={TOOLTIP_WIDTH}
+                height={boxHeight}
+              >
+                <div className="tooltip-box">
+                  <div className="tooltip-title">
+                    {formatMonthLong(p.month.month)}
+                    {isPartial ? ' (in progress)' : ''}
+                  </div>
+                  <dl className="tooltip-figures">
+                    <dt>Spent</dt>
+                    <dd className="num">{formatEur(p.month.total)}</dd>
+                  </dl>
+                  <p className="tooltip-note">{deltaText}</p>
+                </div>
+              </foreignObject>
             </g>
           );
         })}

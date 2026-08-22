@@ -188,6 +188,22 @@ export function formatEurSigned(cents: Cents): string {
 }
 
 /**
+ * `formatEurSigned`, with an explicit "+" prefixed for a positive value —
+ * for a figure like drift or a seasonal delta, where positive and negative
+ * are two different directions to read, not a shortfall to parenthesise.
+ * Zero has no direction, so it renders unsigned, not "+0,00 €".
+ *
+ * Checks the *formatted string's* own sign rather than `cents > 0`: a
+ * numeric comparison would need the same zero special-case, and doesn't
+ * protect against a `-0` `Cents` value, which compares equal to `0` but
+ * `Intl` can still render with a minus sign.
+ */
+export function formatEurExplicitSign(cents: Cents): string {
+  const formatted = formatEurSigned(cents);
+  return cents === 0 || formatted.startsWith('-') ? formatted : `+${formatted}`;
+}
+
+/**
  * Whole euros, for chart axes where the cents are visual clutter.
  *
  * Rounded on the magnitude and the sign reapplied, rather than on the signed

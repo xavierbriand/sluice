@@ -18,7 +18,14 @@ export interface SeasonalShape {
   readonly provenance: SeasonalProvenance;
 }
 
-const FLAT: SeasonalWeights = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+/**
+ * Exported so `consumption.ts` can pace a *second* plan against the same
+ * estimate — what a month would need if the year were spread flat — as the
+ * baseline `monthlyPlan` (paced against whatever `resolveSeasonal` actually
+ * returns) is compared to, to make a seasonal skew visible rather than
+ * just felt.
+ */
+export const FLAT_WEIGHTS: SeasonalWeights = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 /**
  * The seasonal shape to pace `envelope` against.
@@ -54,5 +61,5 @@ export function resolveSeasonal(
   if (weights.some((w) => w > 0)) {
     return { weights: weights as unknown as SeasonalWeights, provenance: 'derived-from-history' };
   }
-  return { weights: FLAT, provenance: 'flat-no-history' };
+  return { weights: FLAT_WEIGHTS, provenance: 'flat-no-history' };
 }

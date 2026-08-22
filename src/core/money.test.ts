@@ -4,6 +4,7 @@ import {
   allocate,
   formatEur,
   formatEurCompact,
+  formatEurExplicitSign,
   formatEurSigned,
   parseAmount,
   sum,
@@ -236,5 +237,20 @@ describe('formatEurSigned', () => {
   it('differs from formatEur precisely in how it shows a negative', () => {
     expect(plain(formatEur(-802500))).toBe('(8 025,00 €)');
     expect(plain(formatEurSigned(-802500))).toBe('-8 025,00 €');
+  });
+});
+
+describe('formatEurExplicitSign', () => {
+  it('prefixes a positive value with +', () => {
+    expect(plain(formatEurExplicitSign(150000))).toBe('+1 500,00 €');
+  });
+
+  it('leaves a negative value with its own minus, not a double sign', () => {
+    expect(plain(formatEurExplicitSign(-150000))).toBe('-1 500,00 €');
+  });
+
+  it('renders zero unsigned — no direction to mark', () => {
+    expect(formatEurExplicitSign(0)).not.toContain('+');
+    expect(formatEurExplicitSign(0)).not.toContain('-');
   });
 });

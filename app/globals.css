@@ -209,6 +209,12 @@ main {
   font-size: 15px;
   font-weight: 600;
 }
+.card > h3 {
+  margin: 28px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
 .card > .deck {
   margin: 0 0 18px;
   font-size: 13px;
@@ -270,6 +276,33 @@ table.income .share {
   color: var(--ink-secondary);
 }
 
+/* "Expected this month" — the seasonal requirement breakdown. */
+.requirement-provenance {
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.requirement-total td {
+  font-weight: 600;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: none;
+}
+.requirement-inactive {
+  margin-top: 10px;
+}
+.requirement-inactive summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  padding: 4px 0;
+}
+.requirement-inactive summary:hover {
+  color: var(--ink-secondary);
+}
+.requirement-inactive .table-scroll {
+  margin-top: 10px;
+}
+
 .chart-wrap {
   margin-top: 22px;
 }
@@ -294,6 +327,10 @@ table.income .share {
   margin: 8px 0 0;
 }
 
+/* visible, not the SVG default hidden: bar tooltips (foreignObject) render outside the nominal viewBox */
+svg.contrib {
+  overflow: visible;
+}
 svg.contrib text {
   font-family: var(--font-sans);
   fill: var(--ink-muted);
@@ -316,6 +353,9 @@ svg.contrib .month-label {
   font-size: 11px;
 }
 
+svg.trend {
+  overflow: visible;
+}
 svg.trend text {
   font-family: var(--font-sans);
   fill: var(--ink-muted);
@@ -354,16 +394,27 @@ svg.trend .mean-line {
 }
 
 /* Envelope meters: a plain HTML ratio-against-a-limit row, not an SVG chart. */
-.meters {
+.envelope-meters {
   margin-top: 26px;
+}
+.meters {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 4px;
 }
 .meter-row {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+}
+.meter-row-over {
+  background: color-mix(in srgb, var(--serious) 7%, transparent);
+}
+.meter-row-under {
+  background: color-mix(in srgb, var(--good) 5%, transparent);
 }
 .meter-label {
   display: flex;
@@ -393,16 +444,133 @@ svg.trend .mean-line {
   border-radius: var(--radius-sm);
   background: var(--series-1);
 }
+/* The part of the bar beyond the estimate — a different texture, not just a longer solid fill. */
 .meter-fill-over {
-  background: var(--serious);
-}
-.meter-pace-tick {
   position: absolute;
-  top: -2px;
-  bottom: -2px;
+  top: 0;
+  bottom: 0;
+  background-color: color-mix(in srgb, var(--serious) 35%, transparent);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--serious) 0,
+    var(--serious) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.meter-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
   width: 2px;
-  background: var(--ink);
   transform: translateX(-1px);
+}
+.meter-mark-estimate {
+  background: var(--ink);
+}
+.meter-mark-pace {
+  background: var(--ink-muted);
+  top: -1px;
+  bottom: -1px;
+}
+.meter-mark-goal {
+  background: var(--good);
+  top: -5px;
+  bottom: -5px;
+}
+/*
+ * Shared by every hover tooltip on the page (envelope meters, the two SVG
+ * bar/line charts) — only the positioning + show/hide trigger differs by
+ * context, set up separately below for each.
+ */
+.tooltip-box {
+  background: var(--ink);
+  color: var(--surface);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.tooltip-figures {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  margin: 0;
+}
+.tooltip-figures dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in srgb, var(--surface) 65%, transparent);
+}
+.tooltip-figures dd {
+  margin: 0;
+  text-align: right;
+}
+.tooltip-note {
+  margin: 8px 0 0;
+  color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+/* Positioning + trigger: envelope meters (plain HTML rows). */
+.meter-row .tooltip-box {
+  position: absolute;
+  left: 10px;
+  bottom: calc(100% + 6px);
+  min-width: 220px;
+  z-index: 20;
+}
+.meter-row:hover .tooltip-box,
+.meter-row:focus-within .tooltip-box {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Positioning + trigger: SVG bar/line charts — the tooltip lives inside a
+   foreignObject already positioned in the chart's own coordinate space, so
+   it just fills the box rather than positioning itself. `overflow: visible`
+   on the anchor lets the box render outside its nominally-reserved area
+   without being clipped by the SVG's own viewBox. */
+.bar-tooltip-anchor {
+  overflow: visible;
+  pointer-events: none;
+}
+.bar-tooltip-anchor .tooltip-box {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+.bar-group:hover .tooltip-box,
+.bar-group:focus-within .tooltip-box {
+  opacity: 1;
+  visibility: visible;
+}
+
+.meters-empty {
+  margin-top: 10px;
+}
+.meters-empty summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  padding: 4px 0;
+}
+.meters-empty summary:hover {
+  color: var(--ink-secondary);
+}
+.meters-empty .meters {
+  margin-top: 10px;
 }
 
 /* 03 · the check */
