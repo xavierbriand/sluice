@@ -27,6 +27,15 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const FRENCH = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const OFX = /^(\d{4})(\d{2})(\d{2})/;
 
+// Error-message prose and `this.name` are left as permanent, deliberate
+// survivors across every error class in `src/` — ten of them, this one
+// included. Nothing anywhere asserts `err.name`; every catch site matches
+// with `instanceof` or `toThrow(SomeErrorClass)`. Mutating a sentence like
+// the one below only tests whether some assertion happens to regex a
+// fragment of it, which is the reason #323 excluded string mutation in
+// `src/config` in the first place — the same reasoning applies here, just
+// not worth a `Stryker disable` directive for every line it touches. Filed
+// as a decision on #328, not re-triaged per class.
 export class DateParseError extends Error {
   readonly raw: string;
   readonly where: string;

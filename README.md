@@ -41,7 +41,7 @@ three minutes.
 
 It prints a score per directory rather than one for the whole tree, because the
 weakest surface otherwise hides behind the strongest — the spread is currently
-thirteen points. The baseline and the triage of every surviving mutant live on
+about ten points (83–94%). The baseline and the triage of every surviving mutant live on
 [#299](https://github.com/xavierbriand/sluice/issues/299); the gaps it found are
 tracked as their own issues rather than fixed inline, so the cost of each stays
 visible. No score threshold is enforced yet, deliberately: [#321](https://github.com/xavierbriand/sluice/issues/321)

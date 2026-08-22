@@ -14,6 +14,8 @@ export type Cents = number;
 
 const AMOUNT = /^[+-]?\d+(?:[.,]\d{1,2})?$/;
 
+// Prose and `this.name` deliberately left surviving — see the comment on
+// DateParseError in dates.ts.
 export class AmountParseError extends Error {
   readonly raw: string;
   readonly where: string;

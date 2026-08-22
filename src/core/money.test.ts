@@ -73,6 +73,12 @@ describe('parseAmount', () => {
   it('names where the bad value came from', () => {
     expect(() => parseAmount('oops', 'export.csv:42 Debit')).toThrow(/export\.csv:42 Debit/);
   });
+
+  it('names the field "amount" when no caller says otherwise', () => {
+    // Every real caller passes its own `where`; only the default had gone
+    // unpinned.
+    expect(() => parseAmount('n/a')).toThrow(/\(amount\)/);
+  });
 });
 
 describe('sum', () => {

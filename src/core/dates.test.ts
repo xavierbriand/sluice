@@ -92,6 +92,12 @@ describe('parseFrenchDay', () => {
     // is asserted rather than left to chance.
     expect(parseFrenchDay('  14/08/2026  ')).toBe('2026-08-14');
   });
+
+  it('names the field "date" when no caller says otherwise', () => {
+    // Every real caller passes its own `where`; only the default had gone
+    // unpinned.
+    expect(() => parseFrenchDay('not-a-date')).toThrow(/\(date\)/);
+  });
 });
 
 describe('parseOfxDay', () => {
@@ -140,6 +146,10 @@ describe('parseOfxDay', () => {
     // return the 3rd west of UTC, turning a paid month into a missed one.
     expect(parseOfxDay('20260804')).toBe('2026-08-04');
   });
+
+  it('names the field "date" when no caller says otherwise', () => {
+    expect(() => parseOfxDay('not-a-date')).toThrow(/\(date\)/);
+  });
 });
 
 describe('month arithmetic', () => {
@@ -175,5 +185,16 @@ describe('month arithmetic', () => {
 
   it('formats a month for a chart label', () => {
     expect(formatMonthLong(makeMonth(2026, 8))).toBe('Aug 2026');
+  });
+
+  it('names every month, not just the ones spot-checked elsewhere', () => {
+    // MONTH_NAMES is rendered straight onto the page. A reordered or
+    // corrupted entry would be a confident wrong month beside a correct
+    // figure — one assertion over all twelve closes every entry at once.
+    const names = monthRange(makeMonth(2026, 1), makeMonth(2026, 12)).map(formatMonthLong);
+    expect(names).toEqual([
+      'Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026',
+      'Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026', 'Dec 2026',
+    ]);
   });
 });

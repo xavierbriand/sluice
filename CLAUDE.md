@@ -22,6 +22,11 @@ here means finding one to cut.
 - **An envelope's `estimate` is a commitment, never regenerated in place.**
   `generateEnvelopeBlock()` (`src/numbers/generate.ts`) only ever returns
   TOML text for a human to paste; nothing in `app/` calls it.
+- **Error-message prose and `this.name` on every custom `Error` subclass are
+  deliberately left as surviving mutants, not tested.** Nothing anywhere
+  asserts `err.name`; every catch site matches by `instanceof` or
+  `toThrow(SomeErrorClass)`. Applies project-wide — filed once as a decision
+  on #328 rather than re-argued per class.
 - **There's no `docs/` folder, and no process documentation lives in this
   repo.** v0.1 had one — 201 lines of `CLAUDE.md` deferring to it, and 72%
   of that version's effort went to process instead of product. Anything
