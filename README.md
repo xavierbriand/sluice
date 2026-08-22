@@ -40,8 +40,13 @@ reports which mutations no test objects to. It sits outside `check` on purpose �
 three minutes.
 
 It prints a score per directory rather than one for the whole tree, because the
-weakest surface otherwise hides behind the strongest — the spread is currently
-thirteen points. The baseline and the triage of every surviving mutant live on
+weakest surface otherwise hides behind the strongest — the spread across `src/`
+is currently about nine points (83–92%). `app/_lib/` joined the measured surface
+in [#322](https://github.com/xavierbriand/sluice/issues/322) and holds a much
+lower score by design, not by neglect: it includes `telemetry.ts`, whose errors
+are deliberately swallowed and so cannot produce the kind of wrong number this
+project's mutation testing exists to catch — see `CLAUDE.md`. The baseline and
+the triage of every surviving mutant live on
 [#299](https://github.com/xavierbriand/sluice/issues/299); the gaps it found are
 tracked as their own issues rather than fixed inline, so the cost of each stays
 visible. No score threshold is enforced yet, deliberately: [#321](https://github.com/xavierbriand/sluice/issues/321)

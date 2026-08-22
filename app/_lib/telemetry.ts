@@ -1,6 +1,18 @@
 import { randomBytes } from 'node:crypto';
 
 /**
+ * Deliberately untested, unlike the rest of `app/_lib/` — see CLAUDE.md.
+ * `CLAUDE.md` names this project's whole defect class in one line: a
+ * plausible wrong number, never a crash. Nothing in this file can produce
+ * one — every error is swallowed (`.catch(() => {})` below), the call never
+ * blocks a render, and the only consumer of its output is an optional
+ * external collector the page itself never reads. Mutation-testing it would
+ * mean writing `fetch`-mocking and module-reimport machinery to chase a
+ * score for bugs that, if they existed, wouldn't be this project's kind of
+ * bug — measuring process rather than product, the thing the README says
+ * v0.1 over-invested in. Left inside the `mutate` glob anyway, so its low
+ * score is visible rather than quietly excluded.
+ *
  * Spans for the reserved `service.name=sluice` workload
  * `observability/README.md` already describes, over the identical transport
  * `observability/hooks/session-outcome.ts` uses: raw OTLP/HTTP JSON over
