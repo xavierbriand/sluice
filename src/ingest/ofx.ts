@@ -48,8 +48,7 @@ export interface OfxStatement {
   readonly transactions: readonly OfxTransaction[];
 }
 
-// Prose and `this.name` deliberately left surviving — see the comment on
-// DateParseError in src/core/dates.ts.
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class OfxFormatError extends Error {
   constructor(message: string) {
     super(message);

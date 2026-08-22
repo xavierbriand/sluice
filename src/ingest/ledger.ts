@@ -111,8 +111,7 @@ export function toTransactions(rows: readonly JoinedRow[], source: Source): Tran
   }));
 }
 
-// Prose and `this.name` deliberately left surviving — see the comment on
-// DateParseError in src/core/dates.ts.
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class DuplicateTransactionError extends Error {
   constructor(message: string) {
     super(message);

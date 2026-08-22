@@ -24,8 +24,7 @@ export type Source =
   | { readonly kind: 'account'; readonly id: string }
   | { readonly kind: 'card'; readonly id: string; readonly cardNumber: string };
 
-// Prose and `this.name` deliberately left surviving — see the comment on
-// DateParseError in src/core/dates.ts.
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class SourceNameError extends Error {
   constructor(message: string) {
     super(message);

@@ -52,8 +52,7 @@ export interface CsvRow {
   readonly line: number;
 }
 
-// Prose and `this.name` deliberately left surviving — see the comment on
-// DateParseError in src/core/dates.ts.
+// Prose and `this.name` deliberately left surviving — see CLAUDE.md.
 export class CsvFormatError extends Error {
   constructor(message: string) {
     super(message);
